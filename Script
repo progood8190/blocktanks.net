@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         BlockTanks JS Override (Preload)
+// @name         BlockTanks Index + JS Override (Stable)
 // @namespace    https://blocktanks.net/
-// @version      1.0
+// @version      1.2
 // @match        https://blocktanks.net/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -11,14 +11,33 @@
 (function() {
     'use strict';
 
+    // ------------------------------
+    // GitHub URLs
+    // ------------------------------
+    const INDEX_URL = 'https://raw.githubusercontent.com/progood8190/blocktanks.net/refs/heads/main/index';
     const MAP_URL = 'https://raw.githubusercontent.com/progood8190/blocktanks.net/refs/heads/main/map.js';
     const GRAPHICS_URL = 'https://raw.githubusercontent.com/progood8190/blocktanks.net/refs/heads/main/graphics.js';
 
-    // Helper to fetch and inject inline JS
-    function inject(url) {
+    // ------------------------------
+    // 1️⃣ Replace index HTML
+    // ------------------------------
+    GM_xmlhttpRequest({
+        method: 'GET',
+        url: INDEX_URL,
+        onload(res) {
+            document.open();
+            document.write(res.responseText);
+            document.close();
+        }
+    });
+
+    // ------------------------------
+    // 2️⃣ Preload / override JS files
+    // ------------------------------
+    function injectRemoteJS(url) {
         GM_xmlhttpRequest({
             method: 'GET',
-            url: url,
+            url,
             onload(res) {
                 const s = document.createElement('script');
                 s.textContent = res.responseText;
@@ -27,11 +46,32 @@
         });
     }
 
-    // Override fetch to redirect map.js and graphics.js
+    // ------------------------------
+    // Override dynamically added <script> tags
+    // ------------------------------
+    const originalAppendChild = Element.prototype.appendChild;
+    Element.prototype.appendChild = function(node) {
+        if (node.tagName === 'SCRIPT' && node.src) {
+            if (node.src.includes('/js/map.js')) {
+                injectRemoteJS(MAP_URL);
+                return node;
+            }
+            if (node.src.includes('/js/graphics.js')) {
+                injectRemoteJS(GRAPHICS_URL);
+                return node;
+            }
+        }
+        return originalAppendChild.call(this, node);
+    };
+
+    // ------------------------------
+    // Override fetch() requests
+    // ------------------------------
     const originalFetch = window.fetch;
     window.fetch = function(input, init) {
         const url = typeof input === 'string' ? input : input.url;
-        if (url.endsWith('/js/map.js')) {
+
+        if (url.includes('/js/map.js')) {
             return new Promise(resolve => {
                 GM_xmlhttpRequest({
                     method: 'GET',
@@ -45,7 +85,8 @@
                 });
             });
         }
-        if (url.endsWith('/js/graphics.js')) {
+
+        if (url.includes('/js/graphics.js')) {
             return new Promise(resolve => {
                 GM_xmlhttpRequest({
                     method: 'GET',
@@ -59,23 +100,29 @@
                 });
             });
         }
+
         return originalFetch(input, init);
     };
 
-    // Override XMLHttpRequest to redirect map.js and graphics.js
+    // ------------------------------
+    // Override XMLHttpRequest
+    // ------------------------------
     const OriginalXHR = window.XMLHttpRequest;
     window.XMLHttpRequest = function() {
         const xhr = new OriginalXHR();
         const open = xhr.open;
         xhr.open = function(method, url, ...rest) {
-            if (url.endsWith('/js/map.js')) url = MAP_URL;
-            if (url.endsWith('/js/graphics.js')) url = GRAPHICS_URL;
+            if (url.includes('/js/map.js')) url = MAP_URL;
+            if (url.includes('/js/graphics.js')) url = GRAPHICS_URL;
             return open.call(this, method, url, ...rest);
         };
         return xhr;
     };
 
-    // Pre-inject the GitHub JS early (in case scripts are inline in index)
-    inject(MAP_URL);
-    inject(GRAPHICS_URL);
+    // ------------------------------
+    // 3️⃣ Optional: preload GitHub JS immediately
+    // ------------------------------
+    injectRemoteJS(MAP_URL);
+    injectRemoteJS(GRAPHICS_URL);
+
 })();
