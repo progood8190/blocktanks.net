@@ -1281,9 +1281,15 @@ twq('config','ocx31');
 	<!-- From Uiverse.io by cuzpq --> 
 		<input type="checkbox" class="theme-checkbox" onchange="dark_mode()" style="position: absolute; bottom: 10px; left: 10px; z-index: 9999; --toggle-size: 12px;">
 	<script>
-	if (window.location.href !== 'https://blocktanks.net/' && window.location.href !== 'https://simple.blocktanks.net/') {
-		document.querySelector('.theme-checkbox').style.display = 'none';
+	function checkVisibility() {
+		if (window.location.href === 'https://blocktanks.net/' || window.location.href === 'https://simple.blocktanks.net/') {
+			document.querySelector('.theme-checkbox').style.display = 'block';
+		} else {
+			document.querySelector('.theme-checkbox').style.display = 'none';
+		}
 	}
+	checkVisibility(); // initial check
+	setInterval(checkVisibility, 1000); // check every second
 	</script>
 	<div id="appearanceChanger">
 		<div id="itemNameLabel">
