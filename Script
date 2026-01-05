@@ -1,0 +1,81 @@
+// ==UserScript==
+// @name         BlockTanks JS Override (Preload)
+// @namespace    https://blocktanks.net/
+// @version      1.0
+// @match        https://blocktanks.net/*
+// @run-at       document-start
+// @grant        GM_xmlhttpRequest
+// @connect      raw.githubusercontent.com
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    const MAP_URL = 'https://raw.githubusercontent.com/progood8190/blocktanks.net/refs/heads/main/map.js';
+    const GRAPHICS_URL = 'https://raw.githubusercontent.com/progood8190/blocktanks.net/refs/heads/main/graphics.js';
+
+    // Helper to fetch and inject inline JS
+    function inject(url) {
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: url,
+            onload(res) {
+                const s = document.createElement('script');
+                s.textContent = res.responseText;
+                document.head.appendChild(s);
+            }
+        });
+    }
+
+    // Override fetch to redirect map.js and graphics.js
+    const originalFetch = window.fetch;
+    window.fetch = function(input, init) {
+        const url = typeof input === 'string' ? input : input.url;
+        if (url.endsWith('/js/map.js')) {
+            return new Promise(resolve => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: MAP_URL,
+                    onload(res) {
+                        resolve(new Response(res.responseText, {
+                            status: 200,
+                            headers: { 'Content-Type': 'application/javascript' }
+                        }));
+                    }
+                });
+            });
+        }
+        if (url.endsWith('/js/graphics.js')) {
+            return new Promise(resolve => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: GRAPHICS_URL,
+                    onload(res) {
+                        resolve(new Response(res.responseText, {
+                            status: 200,
+                            headers: { 'Content-Type': 'application/javascript' }
+                        }));
+                    }
+                });
+            });
+        }
+        return originalFetch(input, init);
+    };
+
+    // Override XMLHttpRequest to redirect map.js and graphics.js
+    const OriginalXHR = window.XMLHttpRequest;
+    window.XMLHttpRequest = function() {
+        const xhr = new OriginalXHR();
+        const open = xhr.open;
+        xhr.open = function(method, url, ...rest) {
+            if (url.endsWith('/js/map.js')) url = MAP_URL;
+            if (url.endsWith('/js/graphics.js')) url = GRAPHICS_URL;
+            return open.call(this, method, url, ...rest);
+        };
+        return xhr;
+    };
+
+    // Pre-inject the GitHub JS early (in case scripts are inline in index)
+    inject(MAP_URL);
+    inject(GRAPHICS_URL);
+})();
