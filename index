@@ -1282,14 +1282,17 @@ twq('config','ocx31');
 		<input type="checkbox" class="theme-checkbox" onchange="dark_mode()" style="position: absolute; bottom: 10px; left: 10px; z-index: 9999; --toggle-size: 12px;">
 	<script>
 	function checkVisibility() {
-		if (window.location.href === 'https://blocktanks.net/' || window.location.href === 'https://simple.blocktanks.net/') {
-			document.querySelector('.theme-checkbox').style.display = 'block';
-		} else {
-			document.querySelector('.theme-checkbox').style.display = 'none';
+		const checkbox = document.querySelector('.theme-checkbox');
+		if (checkbox) {
+			if (window.location.href === 'https://blocktanks.net/' || window.location.href === 'https://simple.blocktanks.net/') {
+				checkbox.style.display = 'block';
+			} else {
+				checkbox.style.display = 'none';
+			}
 		}
 	}
 	checkVisibility(); // initial check
-	setInterval(checkVisibility, 1000); // check every second
+	setInterval(checkVisibility, 100); // check every 100ms
 	</script>
 	<div id="appearanceChanger">
 		<div id="itemNameLabel">
